@@ -7,7 +7,7 @@
     <title>Mateo Leuillier — Digital craft</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
     <script type="importmap">
       {
@@ -30,7 +30,7 @@
       <section class="scene" aria-label="Sélection de projets de Mateo Leuillier">
         <div class="wall-copy">
           <p class="eyebrow">MATEO LEUILLIER</p>
-          <h1>Designer<br /><em>numérique</em> indépendant.</h1>
+          <h1>Bonjour !<br />Je suis un<br /><em>développeur</em> indépendant.</h1>
           <p class="intro">Je conçois et développe des identités, des sites et des expériences interactives pour des projets culturels et éditoriaux.</p>
           <p class="coordinates">48°51'24.2&quot;N&nbsp;&nbsp; / &nbsp;&nbsp;2°20'55.5&quot;E</p>
         </div>
@@ -63,7 +63,7 @@
         </div>
 
         <div class="cassette-area">
-          <div class="cassette-heading"><span>ARCHIVE / TAPES</span><span id="tapeCount">-- / 06</span></div>
+          <div class="cassette-heading"><span>ARCHIVE / TAPES</span><span id="tapeCount">-- / 03</span></div>
           <div class="cassette-stack" id="cassetteStack"></div>
           <p class="stack-note">SÉLECTIONNEZ UNE CASSETTE<br />POUR LANCER LA LECTURE</p>
         </div>
@@ -72,11 +72,50 @@
       <footer class="desk-footer">
         <div class="footer-rule"></div>
         <p>DESIGNER / DEVELOPER</p>
-        <button class="eject-button" id="ejectButton"><span class="eject-icon">↗</span> ÉJECTER LA CASSETTE</button>
-        <a href="mailto:hello@mateoleuillier.fr" class="contact-link">HELLO@MATEOLEUILLIER.FR <span>↗</span></a>
+        <a href="mailto:mateoleuillier@outlook.fr" class="contact-link">mateoleuillier@outlook.fr <span>↗</span></a>
       </footer>
       <div class="table-edge" aria-hidden="true"></div>
+
     </main>
+    <aside class="project-sheet" id="projectSheet" aria-hidden="true" aria-labelledby="sheetTitle">
+      <div class="sheet-backdrop" data-close-sheet></div>
+      <div class="sheet-panel" role="dialog" aria-modal="true">
+        <div class="sheet-toolbar">
+          <span class="sheet-kicker" id="sheetKicker">ARCHIVE / 03</span>
+          <button class="sheet-close" type="button" data-close-sheet aria-label="Fermer la fiche projet">FERMER <span>×</span></button>
+        </div>
+        <div class="sheet-body">
+          <p class="sheet-index" id="sheetIndex">PROJECT 03</p>
+          <h2 id="sheetTitle">SOULFRACT</h2>
+          <p class="sheet-meta" id="sheetMeta"></p>
+          <p class="sheet-lead" id="sheetLead"></p>
+          <div class="sheet-rule"></div>
+          <div class="sheet-content" id="sheetContent"></div>
+        </div>
+      </div>
+    </aside>
+    <aside class="skills-orbit" aria-label="Langages maîtrisés">
+      <button class="skills-toggle" id="skillsToggle" type="button" aria-expanded="false" aria-controls="skillsList" aria-label="Afficher les langages maîtrisés">
+        <span class="skills-toggle-icon" aria-hidden="true"></span>
+      </button>
+      <div class="skills-list" id="skillsList">
+        <div class="skill-bubble skill-csharp" style="--delay: 0ms; --drift: 5px;">
+          <img class="skill-logo" src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/csharp/csharp-original.svg" alt="" /><span class="skill-name">C#</span>
+        </div>
+        <div class="skill-bubble skill-scratch" style="--delay: 55ms; --drift: -4px;">
+          <img class="skill-logo" src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/scratch.svg" alt="" /><span class="skill-name">Scratch</span>
+        </div>
+        <div class="skill-bubble skill-css" style="--delay: 110ms; --drift: 4px;">
+          <img class="skill-logo" src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/css3.svg" alt="" /><span class="skill-name">CSS</span>
+        </div>
+        <div class="skill-bubble skill-html" style="--delay: 165ms; --drift: -5px;">
+          <img class="skill-logo" src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/html5.svg" alt="" /><span class="skill-name">HTML5</span>
+        </div>
+        <div class="skill-bubble skill-python" style="--delay: 220ms; --drift: 4px;">
+          <img class="skill-logo" src="https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/python.svg" alt="" /><span class="skill-name">Python</span>
+        </div>
+      </div>
+    </aside>
     <script type="module" src="script.js"></script>
   </body>
 </html>

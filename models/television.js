@@ -49,6 +49,7 @@ function drawScreen(canvas, project, index, isEjected = false) {
     }
   });
   context.fillText(line, 74, 414 + lineIndex * 23);
+
   context.restore();
 }
 
@@ -98,6 +99,36 @@ export function createTelevisionModel(container, projects) {
 
   const modelLoader = new MTLLoader();
   const objectLoader = new OBJLoader();
+  const textureLoader = new THREE.TextureLoader();
+  const actionTexture = textureLoader.load("models/assets/television_actions.png");
+  let actionPixelData = null;
+  const actionPixelCanvas = document.createElement("canvas");
+  const actionPixelContext = actionPixelCanvas.getContext("2d", { willReadFrequently: true });
+  textureLoader.load("models/assets/television_actions.png", (imageTexture) => {
+    actionPixelCanvas.width = imageTexture.image.width;
+    actionPixelCanvas.height = imageTexture.image.height;
+    actionPixelContext.drawImage(imageTexture.image, 0, 0);
+    actionPixelData = actionPixelContext.getImageData(0, 0, actionPixelCanvas.width, actionPixelCanvas.height);
+  });
+  actionTexture.magFilter = THREE.NearestFilter;
+  actionTexture.minFilter = THREE.NearestFilter;
+  actionTexture.colorSpace = THREE.NoColorSpace;
+  actionTexture.needsUpdate = true;
+  const actionUniforms = {
+    actionMap: { value: actionTexture },
+    hoverUv: { value: new THREE.Vector2() },
+    hasHoveredAction: { value: 0 },
+    dropZonePulse: { value: 0 }
+  };
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+  const fullscreen = document.createElement("div");
+  fullscreen.className = "tv-fullscreen";
+  fullscreen.innerHTML = `<canvas class="tv-fullscreen-screen" aria-label="Vue agrandie de l'écran de télévision"></canvas><button class="tv-fullscreen-back" type="button">RETOUR</button>`;
+  document.body.appendChild(fullscreen);
+  const fullscreenCanvas = fullscreen.querySelector(".tv-fullscreen-screen");
+  const fullscreenContext = fullscreenCanvas.getContext("2d");
+  const fullscreenBackButton = fullscreen.querySelector(".tv-fullscreen-back");
   let television;
   let screenMaterial;
   let baseScreenMap;
@@ -106,6 +137,80 @@ export function createTelevisionModel(container, projects) {
   let cassetteInserted = false;
   let staticAnimationId = null;
   let staticTimeoutId = null;
+  let screenTransitionToken = 0;
+  let ejectHandler = null;
+  let projectOpenHandler = null;
+  let activeProjectIndex = 0;
+
+  function syncFullscreenScreen() {
+    if (!fullscreen.classList.contains("is-visible")) return;
+    fullscreenCanvas.width = canvas.width;
+    fullscreenCanvas.height = canvas.height;
+    fullscreenContext.save();
+    fullscreenContext.translate(fullscreenCanvas.width, fullscreenCanvas.height);
+    fullscreenContext.scale(-1, -1);
+    fullscreenContext.drawImage(canvas, 0, 0);
+    fullscreenContext.restore();
+  }
+
+  function syncFullscreenBaseScreen() {
+    if (!fullscreen.classList.contains("is-visible") || !baseScreenMap?.image || !baseScreenUvs) return;
+    const uv = baseScreenUvs.array;
+    let minX = 1;
+    let maxX = 0;
+    let minY = 1;
+    let maxY = 0;
+    for (let index = 0; index < uv.length; index += 2) {
+      minX = Math.min(minX, uv[index]);
+      maxX = Math.max(maxX, uv[index]);
+      minY = Math.min(minY, uv[index + 1]);
+      maxY = Math.max(maxY, uv[index + 1]);
+    }
+    fullscreenCanvas.width = canvas.width;
+    fullscreenCanvas.height = canvas.height;
+    fullscreenContext.clearRect(0, 0, fullscreenCanvas.width, fullscreenCanvas.height);
+    fullscreenContext.drawImage(
+      baseScreenMap.image,
+      minX * baseScreenMap.image.width,
+      (1 - maxY) * baseScreenMap.image.height,
+      (maxX - minX) * baseScreenMap.image.width,
+      (maxY - minY) * baseScreenMap.image.height,
+      0,
+      0,
+      fullscreenCanvas.width,
+      fullscreenCanvas.height
+    );
+  }
+
+  function setFullscreen(isVisible) {
+    fullscreen.classList.toggle("is-visible", isVisible);
+    if (isVisible) {
+      if (cassetteInserted) syncFullscreenScreen();
+      else syncFullscreenBaseScreen();
+    }
+  }
+
+  function isBlueAction(uv) {
+    return isActionColor(uv, 0, 0, 255);
+  }
+
+  function isRedAction(uv) {
+    return isActionColor(uv, 255, 0, 0);
+  }
+
+  function isActionColor(uv, red, green, blue) {
+    if (!actionPixelData) return false;
+    const centerX = Math.min(actionPixelData.width - 1, Math.max(0, Math.floor(uv.x * actionPixelData.width)));
+    const centerY = Math.min(actionPixelData.height - 1, Math.max(0, Math.floor((1 - uv.y) * actionPixelData.height)));
+    for (let y = centerY - 1; y <= centerY + 1; y += 1) {
+      for (let x = centerX - 1; x <= centerX + 1; x += 1) {
+        if (x < 0 || y < 0 || x >= actionPixelData.width || y >= actionPixelData.height) continue;
+        const offset = (y * actionPixelData.width + x) * 4;
+        if (Math.abs(actionPixelData.data[offset] - red) < 35 && Math.abs(actionPixelData.data[offset + 1] - green) < 35 && Math.abs(actionPixelData.data[offset + 2] - blue) < 35) return true;
+      }
+    }
+    return false;
+  }
 
   function fitCameraToTelevision() {
     if (!television) return;
@@ -137,6 +242,101 @@ export function createTelevisionModel(container, projects) {
     }
   }
 
+  function addActionShader(material, useActionUv = false) {
+    if (!material.map) return;
+    material.onBeforeCompile = (shader) => {
+      shader.uniforms.actionMap = actionUniforms.actionMap;
+      shader.uniforms.hoverUv = actionUniforms.hoverUv;
+      shader.uniforms.hasHoveredAction = actionUniforms.hasHoveredAction;
+      shader.uniforms.dropZonePulse = actionUniforms.dropZonePulse;
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <map_pars_fragment>",
+        `#include <map_pars_fragment>
+uniform sampler2D actionMap;
+uniform vec2 hoverUv;
+      uniform float hasHoveredAction;
+  uniform float dropZonePulse;
+      ${useActionUv ? "varying vec2 vActionUv;" : ""}`
+      );
+      if (useActionUv) {
+        shader.vertexShader = shader.vertexShader.replace(
+          "#include <uv_pars_vertex>",
+          `#include <uv_pars_vertex>
+varying vec2 vActionUv;`
+        );
+        shader.vertexShader = shader.vertexShader.replace(
+          "#include <uv_vertex>",
+          `#include <uv_vertex>
+vActionUv = uv1;`
+        );
+      }
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <map_fragment>",
+        `#include <map_fragment>
+      vec3 hoveredAction = texture2D(actionMap, hoverUv).rgb;
+float hoveredMagenta = step(distance(hoveredAction, vec3(1.0, 0.0, 1.0)), 0.08);
+float hoveredRed = step(distance(hoveredAction, vec3(1.0, 0.0, 0.0)), 0.08);
+float hoveredBlue = step(distance(hoveredAction, vec3(0.0, 0.0, 1.0)), 0.08);
+vec3 actionPixel = texture2D(actionMap, ${useActionUv ? "vActionUv" : "vMapUv"}).rgb;
+float magentaMask = step(distance(actionPixel, vec3(1.0, 0.0, 1.0)), 0.08);
+float redMask = step(distance(actionPixel, vec3(1.0, 0.0, 0.0)), 0.08);
+float blueMask = step(distance(actionPixel, vec3(0.0, 0.0, 1.0)), 0.08);
+float highlightMask = hasHoveredAction * (hoveredMagenta * magentaMask + hoveredRed * redMask + hoveredBlue * blueMask);
+  diffuseColor.rgb *= 1.0 + highlightMask * 4.5 + magentaMask * dropZonePulse * 1.8;`
+      );
+    };
+    material.customProgramCacheKey = () => "television-action-zones-v1";
+  }
+
+  function clearHoveredAction() {
+    actionUniforms.hasHoveredAction.value = 0;
+  }
+
+  function setDropZoneActive(isActive) {
+    actionUniforms.dropZonePulse.value = isActive ? 0.2 : 0;
+  }
+
+  function updateHoveredAction(event) {
+    if (!television) return;
+    const bounds = renderer.domElement.getBoundingClientRect();
+    pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
+    pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+    const hit = raycaster.intersectObject(television, true)[0];
+    const actionUv = hit?.object === television.getObjectByName("screen") ? hit.uv1 : hit?.uv;
+    if (!actionUv) {
+      clearHoveredAction();
+      return;
+    }
+    actionUniforms.hoverUv.value.copy(actionUv);
+    actionUniforms.hasHoveredAction.value = 1;
+  }
+
+  function activateAction(event) {
+    if (!television || fullscreen.classList.contains("is-visible")) return;
+    const bounds = renderer.domElement.getBoundingClientRect();
+    if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) return;
+    pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
+    pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+    const hit = raycaster.intersectObject(television, true)[0];
+    const actionUv = hit?.object === television.getObjectByName("screen") ? hit.uv1 : hit?.uv;
+    const isScreenAction = hit?.object === television.getObjectByName("screen");
+    if (actionUv && isRedAction(actionUv)) {
+      if (cassetteInserted) ejectHandler?.();
+      else playEjectedStatic();
+      return;
+    }
+    if (isScreenAction && !cassetteInserted) {
+      playEjectedStatic();
+      return;
+    }
+    if (actionUv && isBlueAction(actionUv)) {
+      if (cassetteInserted) projectOpenHandler?.(activeProjectIndex);
+      else setFullscreen(true);
+    }
+  }
+
   function restoreBaseScreen() {
     const screenMesh = television?.getObjectByName("screen");
     if (!screenMesh || !screenMaterial || !baseScreenMap || !baseScreenUvs) return;
@@ -145,6 +345,13 @@ export function createTelevisionModel(container, projects) {
     screenMaterial.emissiveMap = null;
     screenMaterial.emissiveIntensity = 0;
     screenMaterial.needsUpdate = true;
+  }
+
+  function showEjectedScreen() {
+    cancelAnimationFrame(staticAnimationId);
+    clearTimeout(staticTimeoutId);
+    restoreBaseScreen();
+    syncFullscreenBaseScreen();
   }
 
   function drawStaticFrame(context, frame) {
@@ -166,9 +373,11 @@ export function createTelevisionModel(container, projects) {
   }
 
   function playStaticTransition(projectIndex) {
+    const transitionToken = ++screenTransitionToken;
     if (!screenMaterial || !dynamicScreenUvs) {
       drawScreen(canvas, projects[projectIndex], projectIndex);
       texture.needsUpdate = true;
+      syncFullscreenScreen();
       return;
     }
 
@@ -178,20 +387,60 @@ export function createTelevisionModel(container, projects) {
     cancelAnimationFrame(staticAnimationId);
     clearTimeout(staticTimeoutId);
 
+    function finishStaticTransition() {
+      if (transitionToken !== screenTransitionToken) return;
+      cancelAnimationFrame(staticAnimationId);
+      drawScreen(canvas, projects[projectIndex], projectIndex);
+      texture.needsUpdate = true;
+      syncFullscreenScreen();
+      staticAnimationId = null;
+      staticTimeoutId = null;
+    }
+
     function animateStatic(now) {
+      if (transitionToken !== screenTransitionToken) return;
       const progress = Math.min(1, (now - startedAt) / duration);
       drawStaticFrame(context, Math.floor(now / 32));
       texture.needsUpdate = true;
+      syncFullscreenScreen();
       if (progress < 1) {
         staticAnimationId = requestAnimationFrame(animateStatic);
         return;
       }
-      drawScreen(canvas, projects[projectIndex], projectIndex);
-      texture.needsUpdate = true;
+      finishStaticTransition();
     }
 
     staticAnimationId = requestAnimationFrame(animateStatic);
-    staticTimeoutId = setTimeout(() => cancelAnimationFrame(staticAnimationId), duration + 40);
+    staticTimeoutId = setTimeout(finishStaticTransition, duration + 100);
+  }
+
+  function playEjectedStatic() {
+    const transitionToken = ++screenTransitionToken;
+    const screenMesh = television?.getObjectByName("screen");
+    if (!screenMesh || !screenMaterial || !dynamicScreenUvs) return;
+    const context = canvas.getContext("2d");
+    const startedAt = performance.now();
+    const duration = 520;
+    cancelAnimationFrame(staticAnimationId);
+    clearTimeout(staticTimeoutId);
+    screenMesh.geometry.setAttribute("uv", dynamicScreenUvs);
+    screenMaterial.map = texture;
+    screenMaterial.emissiveMap = texture;
+    screenMaterial.emissiveIntensity = 0.75;
+    screenMaterial.needsUpdate = true;
+
+    function animateEjectedStatic(now) {
+      if (transitionToken !== screenTransitionToken) return;
+      if (now - startedAt < duration) {
+        drawStaticFrame(context, Math.floor(now / 32));
+        texture.needsUpdate = true;
+        staticAnimationId = requestAnimationFrame(animateEjectedStatic);
+        return;
+      }
+      showEjectedScreen();
+    }
+
+    staticAnimationId = requestAnimationFrame(animateEjectedStatic);
   }
 
   modelLoader.load("models/assets/television.mtl", (materials) => {
@@ -207,6 +456,7 @@ export function createTelevisionModel(container, projects) {
         if (part.name.toLowerCase() === "screen") {
           baseScreenMap = part.material.map;
           baseScreenUvs = part.geometry.attributes.uv.clone();
+          part.geometry.setAttribute("uv1", baseScreenUvs.clone());
           mapScreenUvs(part);
           dynamicScreenUvs = part.geometry.attributes.uv.clone();
           screenMaterial = part.material.clone();
@@ -214,8 +464,13 @@ export function createTelevisionModel(container, projects) {
           screenMaterial.emissive = new THREE.Color(0x16221e);
           screenMaterial.emissiveMap = texture;
           screenMaterial.emissiveIntensity = 0.75;
+          addActionShader(screenMaterial, true);
           part.material = screenMaterial;
           part.renderOrder = 2;
+        } else {
+          const material = part.material.clone();
+          addActionShader(material);
+          part.material = material;
         }
         if (part.material.map) {
           part.material.map.colorSpace = THREE.SRGBColorSpace;
@@ -225,24 +480,28 @@ export function createTelevisionModel(container, projects) {
         }
       });
       scene.add(television);
-      if (!cassetteInserted) restoreBaseScreen();
+      if (!cassetteInserted) showEjectedScreen();
       resize();
     });
   });
 
-  function render() {
+  function render(time) {
+    if (actionUniforms.dropZonePulse.value > 0) {
+      actionUniforms.dropZonePulse.value = 0.2 + (Math.sin(time * 0.006) + 1) * 0.4;
+    }
     renderer.render(scene, camera);
     requestAnimationFrame(render);
   }
 
-  function update(projectIndex, isEjected = false) {
+  function update(projectIndex, isEjected = false, animate = true) {
     if (isEjected) {
       cassetteInserted = false;
-      restoreBaseScreen();
+      playEjectedStatic();
       return;
     }
 
     cassetteInserted = true;
+    activeProjectIndex = projectIndex;
     const screenMesh = television?.getObjectByName("screen");
     if (screenMesh && screenMaterial && dynamicScreenUvs) {
       screenMesh.geometry.setAttribute("uv", dynamicScreenUvs);
@@ -251,13 +510,36 @@ export function createTelevisionModel(container, projects) {
       screenMaterial.emissiveIntensity = 0.75;
       screenMaterial.needsUpdate = true;
     }
-    playStaticTransition(projectIndex);
+    if (animate) {
+      playStaticTransition(projectIndex);
+      return;
+    }
+
+    screenTransitionToken += 1;
+    cancelAnimationFrame(staticAnimationId);
+    clearTimeout(staticTimeoutId);
+    drawScreen(canvas, projects[projectIndex], projectIndex);
+    texture.needsUpdate = true;
+    syncFullscreenScreen();
   }
 
   update(0, true);
   resize();
   window.addEventListener("resize", resize);
+  window.addEventListener("pointermove", updateHoveredAction);
+  window.addEventListener("blur", clearHoveredAction);
+  window.addEventListener("click", activateAction);
+  fullscreenBackButton.addEventListener("click", () => setFullscreen(false));
   render();
 
-  return { update };
+  return {
+    update,
+    setDropZoneActive,
+    setEjectHandler(handler) {
+      ejectHandler = handler;
+    },
+    setProjectOpenHandler(handler) {
+      projectOpenHandler = handler;
+    }
+  };
 }

@@ -2,9 +2,9 @@ import { createCassetteModels } from "./models/cassette.js";
 import { createTelevisionModel } from "./models/television.js";
 
 const projects = [
-  { title: "NOUVELLE<br>VAGUE", meta: "IDENTITÉ + DIGITAL&nbsp;&nbsp; / &nbsp;&nbsp;2024", description: "Un studio sonore qui transforme la matière brute en paysages sensibles." },
-  { title: "ATELIER<br>NOCTURNE", meta: "E-COMMERCE + DIRECTION ART.&nbsp;&nbsp; / &nbsp;&nbsp;2023", description: "Une boutique d'objets édités en petites séries, pensée comme une galerie." },
-  { title: "FUTURE<br>FOLK", meta: "DIRECTION ART. + WEBGL&nbsp;&nbsp; / &nbsp;&nbsp;2022", description: "Une archive vivante pour les artistes qui dessinent les futurs désirables." }
+  { title: "TEST<br>1", meta: "TEST 1", description: "TEST 1", lead: "TEST 1", content: "<p>TEST 1</p>" },
+  { title: "TEST<br>2", meta: "TEST 2", description: "TEST 2", lead: "TEST 2", content: "<p>TEST 2</p>" },
+  { title: "SOUL<br>FRACT", meta: "JEU VIDÉO + UNIVERS&nbsp;&nbsp; / &nbsp;&nbsp;2025", description: "Un jeu de survie et d'exploration où chaque âme porte la mémoire d'un autre monde.", lead: "Soulfract est un jeu de survie, d'exploration et de création dans un monde où les âmes voyagent entre les étoiles.", content: "<p>Les étoiles produisent des âmes, fragments d'une Lumière Primordiale. Lorsqu'une âme trouve un corps, elle se fond à lui et laisse une marque qui influence sa trajectoire.</p><h3>Un monde à choisir</h3><p>Le joueur se réveille dans un corps étranger, avec des souvenirs incomplets. Il peut protéger les âmes, traquer les Ombres, étudier les fusions ou chercher sa propre mission.</p><h3>La fracture</h3><p>Certains êtres abritent plusieurs âmes. Cette puissance exceptionnelle a un prix : l'instabilité, les voix et le risque de devenir une Ombre. Le monde change selon les choix du joueur.</p><div class=\"sheet-tags\"><span>EXPLORATION</span><span>SURVIE</span><span>LORE</span><span>CRÉATION</span></div>" }
 ];
 
 const stack = document.querySelector("#cassetteStack");
@@ -13,8 +13,18 @@ const projectTitle = document.querySelector("#projectTitle");
 const projectMeta = document.querySelector("#projectMeta");
 const projectDescription = document.querySelector("#projectDescription");
 const tapeCount = document.querySelector("#tapeCount");
-const ejectButton = document.querySelector("#ejectButton");
+const projectSheet = document.querySelector("#projectSheet");
+const sheetKicker = document.querySelector("#sheetKicker");
+const sheetIndex = document.querySelector("#sheetIndex");
+const sheetTitle = document.querySelector("#sheetTitle");
+const sheetMeta = document.querySelector("#sheetMeta");
+const sheetLead = document.querySelector("#sheetLead");
+const sheetContent = document.querySelector("#sheetContent");
 const televisionDropZone = document.querySelector(".tv-wrap");
+const skillsOrbit = document.querySelector(".skills-orbit");
+const skillsToggle = document.querySelector("#skillsToggle");
+const skillBubbles = [...document.querySelectorAll(".skill-bubble")];
+const wallCopy = document.querySelector(".wall-copy");
 const televisionModel = createTelevisionModel(document.querySelector("#televisionModel"), projects);
 const stage = document.createElement("div");
 stage.className = "cassette-stage";
@@ -22,7 +32,56 @@ document.body.appendChild(stage);
 const cassetteElements = [];
 const cassetteHitAreas = [];
 let cassetteOrder = projects.map((_, index) => index);
-createCassetteModels(stage, projects);
+const cassetteModels = createCassetteModels(stage, projects);
+
+function startWallCopyAnimation() {
+  if (!wallCopy || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  const textNodes = [];
+  const walker = document.createTreeWalker(wallCopy, NodeFilter.SHOW_TEXT);
+  let currentNode = walker.nextNode();
+
+  while (currentNode) {
+    if (currentNode.textContent.trim()) textNodes.push(currentNode);
+    currentNode = walker.nextNode();
+  }
+
+  let characterIndex = 0;
+  textNodes.forEach((textNode) => {
+    const fragment = document.createDocumentFragment();
+    textNode.textContent.split(/(\s+)/).forEach((token) => {
+      if (/^\s+$/.test(token)) {
+        [...token].forEach((character) => {
+          const span = document.createElement("span");
+          span.className = "typewriter-character is-space";
+          span.textContent = character;
+          span.style.setProperty("--character-delay", `${characterIndex * 24}ms`);
+          fragment.appendChild(span);
+          characterIndex += 1;
+        });
+        return;
+      }
+
+      if (!token) return;
+      const word = document.createElement("span");
+      word.className = "typewriter-word";
+      [...token].forEach((character) => {
+        const span = document.createElement("span");
+        span.className = "typewriter-character";
+        span.textContent = character;
+        span.style.setProperty("--character-delay", `${characterIndex * 24}ms`);
+        word.appendChild(span);
+        characterIndex += 1;
+      });
+      fragment.appendChild(word);
+    });
+    textNode.replaceWith(fragment);
+  });
+
+  wallCopy.classList.add("is-typing");
+}
+
+startWallCopyAnimation();
 
 let draggedCassette = null;
 let dragOffsetX = 0;
@@ -30,6 +89,7 @@ let dragOffsetY = 0;
 let dragStartX = 0;
 let dragStartY = 0;
 let didDrag = false;
+let suppressCassetteClick = false;
 let insertedCassetteIndex = null;
 
 projects.forEach((project, index) => {
@@ -42,11 +102,14 @@ projects.forEach((project, index) => {
   const hitArea = document.createElement("span");
   hitArea.className = "cassette-hit-area";
   hitArea.setAttribute("aria-hidden", "true");
-  cassette.addEventListener("click", (event) => {
-    if (event.detail > 0) return;
-    selectProject(index);
-  });
   hitArea.addEventListener("pointerdown", (event) => startDragging(event, cassette, index));
+  hitArea.addEventListener("click", () => {
+    if (suppressCassetteClick) {
+      suppressCassetteClick = false;
+      return;
+    }
+    if (insertedCassetteIndex !== index) insertCassette(index, false);
+  });
   hitArea.addEventListener("pointerenter", () => cassette.classList.add("is-hovered"));
   hitArea.addEventListener("pointerleave", () => cassette.classList.remove("is-hovered"));
   stack.appendChild(cassette);
@@ -87,10 +150,10 @@ function layoutCassettes() {
     cassette.style.setProperty("bottom", `${bottomIndex * gap}px`, "important");
     cassette.style.setProperty("left", `${offsets[bottomIndex] ?? 0}px`, "important");
     cassette.style.setProperty("z-index", `${bottomIndex + 1}`, "important");
-    hitArea.style.setProperty("bottom", `${bottomIndex * gap + cassetteHeight * 0.08}px`, "important");
-    hitArea.style.setProperty("left", `${(offsets[bottomIndex] ?? 0) + cassette.offsetWidth * 0.24}px`, "important");
-    hitArea.style.setProperty("width", `${cassette.offsetWidth * 0.74}px`, "important");
-    hitArea.style.setProperty("height", `${cassetteHeight * 0.84}px`, "important");
+    hitArea.style.setProperty("bottom", `${bottomIndex * gap}px`, "important");
+    hitArea.style.setProperty("left", `${offsets[bottomIndex] ?? 0}px`, "important");
+    hitArea.style.setProperty("width", `${cassette.offsetWidth}px`, "important");
+    hitArea.style.setProperty("height", `${cassetteHeight}px`, "important");
     hitArea.style.setProperty("z-index", `${bottomIndex + 1}`, "important");
     hitArea.style.visibility = cassette.classList.contains("is-inserted") ? "hidden" : "visible";
   });
@@ -99,6 +162,8 @@ function layoutCassettes() {
 function startDragging(event, cassette, index) {
   if (event.button !== 0 || cassette.classList.contains("is-inserted")) return;
   event.preventDefault();
+  suppressCassetteClick = false;
+  televisionModel.setDropZoneActive(true);
   document.body.classList.add("is-dragging-cassette");
 
   const bounds = cassette.getBoundingClientRect();
@@ -138,13 +203,15 @@ function moveDraggedCassette(event) {
 
 function stopDragging(event) {
   document.removeEventListener("pointermove", moveDraggedCassette);
+  televisionModel.setDropZoneActive(false);
   document.body.classList.remove("is-dragging-cassette");
   if (!draggedCassette) return;
 
   const { cassette, index } = draggedCassette;
   const wasDrag = didDrag;
+  suppressCassetteClick = wasDrag;
   if (!wasDrag) {
-    insertCassette(index);
+    insertCassette(index, false);
     draggedCassette = null;
     didDrag = false;
     return;
@@ -152,7 +219,7 @@ function stopDragging(event) {
   const televisionBounds = televisionDropZone.getBoundingClientRect();
   const droppedOnTelevision = event.clientX >= televisionBounds.left && event.clientX <= televisionBounds.right && event.clientY >= televisionBounds.top && event.clientY <= televisionBounds.bottom;
   if (droppedOnTelevision) {
-    insertCassette(index);
+    insertCassette(index, true);
   } else {
     const startLeft = Number.parseFloat(cassette.style.left) || cassette.getBoundingClientRect().left;
     const startTop = Number.parseFloat(cassette.style.top) || cassette.getBoundingClientRect().top;
@@ -177,7 +244,7 @@ function stopDragging(event) {
   didDrag = false;
 }
 
-function insertCassette(index) {
+function insertCassette(index, openSheet = true) {
   const previousIndex = insertedCassetteIndex;
   if (previousIndex !== null && previousIndex !== index) {
     const previousCassette = cassetteElements[previousIndex];
@@ -195,7 +262,7 @@ function insertCassette(index) {
   cassetteOrder = cassetteOrder.filter((cassetteIndex) => cassetteIndex !== index);
   insertedCassetteIndex = index;
   layoutCassettes();
-  selectProject(index);
+  selectProject(index, openSheet, true);
 }
 
 function resetCassettePosition(cassette) {
@@ -256,9 +323,9 @@ function animateCassetteToStack(cassette, targetBounds) {
   requestAnimationFrame(animate);
 }
 
-function selectProject(index) {
+function selectProject(index, openSheet = true, animateScreen = true) {
   const project = projects[index];
-  televisionModel.update(index);
+  televisionModel.update(index, false, animateScreen);
   screenContent.style.opacity = "0";
   setTimeout(() => {
     projectTitle.innerHTML = project.title;
@@ -271,10 +338,37 @@ function selectProject(index) {
     cassette.classList.toggle("is-playing", cassetteIndex === index);
     cassette.querySelector(".cassette-label span:last-child").textContent = cassetteIndex === index ? "PLAYING" : "TAPE";
   });
-  tapeCount.textContent = `0${index + 1} / 06`;
+  tapeCount.textContent = `0${index + 1} / 03`;
+  if (openSheet) openProjectSheet(index);
 }
 
-ejectButton.addEventListener("click", () => {
+function openProjectSheet(index) {
+  const project = projects[index];
+  sheetKicker.textContent = `ARCHIVE / 0${index + 1}`;
+  sheetIndex.textContent = `PROJECT 0${index + 1}`;
+  sheetTitle.innerHTML = project.title;
+  sheetMeta.innerHTML = project.meta;
+  sheetLead.textContent = project.lead;
+  sheetContent.innerHTML = project.content;
+  projectSheet.classList.add("is-visible");
+  projectSheet.setAttribute("aria-hidden", "false");
+  document.body.classList.add("is-sheet-open");
+}
+
+function closeProjectSheet() {
+  projectSheet.classList.remove("is-visible");
+  projectSheet.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("is-sheet-open");
+}
+
+document.querySelectorAll("[data-close-sheet]").forEach((element) => {
+  element.addEventListener("click", closeProjectSheet);
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeProjectSheet();
+});
+
+function ejectCassette() {
   const ejectedIndex = insertedCassetteIndex;
   televisionModel.update(0, true);
   screenContent.style.opacity = "0";
@@ -295,5 +389,37 @@ ejectButton.addEventListener("click", () => {
   }
   insertedCassetteIndex = null;
   layoutCassettes();
-  tapeCount.textContent = "-- / 06";
+  if (ejectedIndex !== null) cassetteModels.reveal(ejectedIndex);
+  tapeCount.textContent = "-- / 03";
+}
+
+televisionModel.setEjectHandler(ejectCassette);
+televisionModel.setProjectOpenHandler(openProjectSheet);
+
+skillsToggle.addEventListener("click", () => {
+  const isOpen = skillsOrbit.classList.toggle("is-open");
+  skillsToggle.setAttribute("aria-expanded", String(isOpen));
+  skillsToggle.setAttribute("aria-label", isOpen ? "Masquer les langages maîtrisés" : "Afficher les langages maîtrisés");
+  if (isOpen) positionSkillBubbles();
 });
+
+function positionSkillBubbles() {
+  const buttonBounds = skillsToggle.getBoundingClientRect();
+  const bubbleSize = window.matchMedia("(max-width: 720px)").matches ? 52 : 58;
+  const gap = window.matchMedia("(max-width: 720px)").matches ? 14 : 22;
+  const positions = window.matchMedia("(max-width: 720px)").matches
+    ? [[0, -104], [47, -86], [78, -42], [70, 10], [34, 49]]
+    : [[0, -130], [62, -108], [112, -55], [105, 9], [52, 65]];
+  const maxLeft = window.innerWidth - bubbleSize - gap;
+  const maxTop = window.innerHeight - bubbleSize - gap;
+
+  skillBubbles.forEach((bubble, index) => {
+    const [offsetX, offsetY] = positions[index];
+    const left = Math.min(maxLeft, Math.max(gap, buttonBounds.left + offsetX));
+    const top = Math.min(maxTop, Math.max(gap, buttonBounds.top + offsetY));
+    bubble.style.setProperty("--bubble-left", `${left}px`);
+    bubble.style.setProperty("--bubble-top", `${top}px`);
+  });
+}
+
+window.addEventListener("resize", positionSkillBubbles);

@@ -61,7 +61,7 @@ export function createCassetteModels(stage, projects) {
   modelLoader.load("models/assets/Cassette.mtl", (materials) => {
     materials.preload();
     objectLoader.setMaterials(materials);
-    objectLoader.load("models/assets/Cassette.obj", (model) => {
+    objectLoader.load("models/assets/Cassette.obj", async (model) => {
       model.traverse((part) => {
         if (!part.isMesh) return;
         const materials = Array.isArray(part.material) ? part.material : [part.material];
@@ -95,13 +95,14 @@ export function createCassetteModels(stage, projects) {
         object.rotation.set(0, cassetteAngles[index], 0);
         object.position.set([-0.18, 0.28, 0][index], index * 0.22, 0);
 
+        await document.fonts.load("29px Bungee");
         const titleCanvas = document.createElement("canvas");
         titleCanvas.width = 512;
         titleCanvas.height = 64;
         const titleContext = titleCanvas.getContext("2d");
         titleContext.clearRect(0, 0, titleCanvas.width, titleCanvas.height);
         titleContext.fillStyle = "#e4dcc7";
-        titleContext.font = "600 25px 'Space Grotesk', sans-serif";
+        titleContext.font = "29px 'Bungee', sans-serif";
         titleContext.textAlign = "center";
         titleContext.textBaseline = "middle";
         titleContext.fillText(projects[index].title.replace("<br>", " "), titleCanvas.width / 2, titleCanvas.height / 2);
@@ -115,7 +116,7 @@ export function createCassetteModels(stage, projects) {
         object.add(titlePlane);
 
           scene.add(object);
-          modelObjects.push({ object, index });
+          modelObjects.push({ object, index, appearanceStartedAt: performance.now() + index * 160 });
       }
     });
   });
@@ -124,14 +125,23 @@ export function createCassetteModels(stage, projects) {
     const deltaTime = previousRenderTime ? Math.min(50, time - previousRenderTime) : 16;
     const rotationSmoothing = 1 - Math.exp(-deltaTime / 120);
     previousRenderTime = time;
-    modelObjects.forEach(({ object, index }) => {
+    modelObjects.forEach(({ object, index, appearanceStartedAt }) => {
       const cassette = document.querySelector(`.cassette[data-index="${index}"]`);
       const bounds = cassette?.getBoundingClientRect();
-      if (bounds) {
-        object.position.x = (bounds.left + bounds.width / 2 - window.innerWidth / 2) / pixelsPerWorldX;
-        object.position.y = (window.innerHeight / 2 - bounds.top - bounds.height / 2) / pixelsPerWorldY;
-        object.visible = !cassette.classList.contains("is-inserted");
-        object.scale.setScalar(cassette.classList.contains("is-hovered") ? cassetteScale * 1.03 : cassetteScale);
+      if (!bounds) {
+        object.visible = false;
+        return;
+      }
+      const targetX = (bounds.left + bounds.width / 2 - window.innerWidth / 2) / pixelsPerWorldX;
+      const targetY = (window.innerHeight / 2 - bounds.top - bounds.height / 2) / pixelsPerWorldY;
+      const appearanceProgress = THREE.MathUtils.clamp((time - appearanceStartedAt) / 420, 0, 1);
+      const appearanceEase = 1 - Math.pow(1 - appearanceProgress, 3);
+      const isInserted = cassette.classList.contains("is-inserted");
+      object.position.x = targetX;
+      object.position.y = targetY + (1 - appearanceEase) * 0.18;
+      object.visible = !isInserted && appearanceProgress > 0;
+      const hoverScale = cassette.classList.contains("is-hovered") ? 1.03 : 1;
+      object.scale.setScalar(cassetteScale * (0.78 + appearanceEase * 0.22) * hoverScale);
         let targetRotationX = 0;
         let targetRotationY = cassetteAngles[index] + Math.sin(time * 0.0007 + index) * 0.006;
         if (cassette.classList.contains("is-dragging")) {
@@ -145,13 +155,19 @@ export function createCassetteModels(stage, projects) {
         object.rotation.x = THREE.MathUtils.lerp(object.rotation.x, targetRotationX, rotationSmoothing);
         object.rotation.y = THREE.MathUtils.lerp(object.rotation.y, targetRotationY, rotationSmoothing);
         object.rotation.z = THREE.MathUtils.lerp(object.rotation.z, 0, rotationSmoothing);
-      }
     });
     renderer.render(scene, camera);
     requestAnimationFrame(render);
   }
 
+  function reveal(index) {
+    const model = modelObjects.find((entry) => entry.index === index);
+    if (model) model.appearanceStartedAt = performance.now();
+  }
+
   resize();
   window.addEventListener("resize", resize);
   requestAnimationFrame(render);
+
+  return { reveal };
 }
