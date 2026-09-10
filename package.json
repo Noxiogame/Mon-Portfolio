@@ -1,0 +1,14 @@
+{
+  "name": "portfolio-mateo-leuillier",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Portfolio de Mateo Leuillier",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "latest"
+  }
+}

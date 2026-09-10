@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Portfolio de Mateo Leuillier, designer et développeur d'expériences digitales." />
+    <title>Mateo Leuillier — Digital craft, thoughtful code</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="cursor-glow" aria-hidden="true"></div>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="Retour en haut">
+        <span class="brand-mark">ML</span>
+        <span class="brand-copy">Mateo<br /><em>Leuillier</em></span>
+      </a>
+      <nav class="main-nav" aria-label="Navigation principale">
+        <a href="#work">Projets</a>
+        <a href="#about">À propos</a>
+        <a href="#contact">Contact</a>
+      </nav>
+      <a class="availability" href="#contact"><span></span> Disponible pour un projet</a>
+    </header>
+
+    <main id="top">
+      <section class="hero section-shell">
+        <div class="hero-meta mono"><span>PORTFOLIO / 2024—2025</span><span>PARIS · FR</span></div>
+        <div class="hero-content">
+          <p class="eyebrow"><span class="eyebrow-line"></span> Design &amp; développement créatif</p>
+          <h1>Je fabrique des<br /><span>expériences</span><br />qui restent.</h1>
+          <p class="hero-intro">Je m'appelle Mateo. Je transforme des idées complexes en produits digitaux clairs, vivants et un peu inattendus.</p>
+          <a class="button button-primary" href="#work">Explorer les projets <span>↘</span></a>
+        </div>
+        <div class="hero-visual" aria-hidden="true">
+          <div class="orbit orbit-one"></div>
+          <div class="orbit orbit-two"></div>
+          <div class="hero-shard shard-one"></div>
+          <div class="hero-shard shard-two"></div>
+          <div class="hero-coordinate mono">48°51'24" N<br />02°21'08" E</div>
+          <div class="hero-stamp">MAKE<br /><strong>IT</strong><br />MATTER</div>
+        </div>
+        <div class="scroll-cue mono"><span class="scroll-line"></span> SCROLL TO DISCOVER</div>
+      </section>
+
+      <section id="work" class="work section-shell">
+        <div class="section-heading">
+          <div><p class="eyebrow"><span class="eyebrow-line"></span> Sélection</p><h2>Projets<br /><span>choisis.</span></h2></div>
+          <p class="section-note">Quelques terrains de jeu récents.<br />Chaque projet est une nouvelle<br />question à résoudre.</p>
+        </div>
+        <div class="filter-bar mono" role="tablist" aria-label="Filtrer les projets">
+          <button class="filter active" data-filter="all" role="tab" aria-selected="true">TOUT <sup>04</sup></button>
+          <button class="filter" data-filter="web" role="tab" aria-selected="false">WEB <sup>02</sup></button>
+          <button class="filter" data-filter="brand" role="tab" aria-selected="false">IDENTITÉ <sup>01</sup></button>
+          <button class="filter" data-filter="lab" role="tab" aria-selected="false">LAB <sup>01</sup></button>
+        </div>
+        <div class="projects-grid">
+          <article class="project-card project-featured" data-category="web" data-project="atelier">
+            <div class="project-art art-atlas"><div class="art-grid"></div><span class="art-label mono">A / 01</span><span class="art-orb"></span><span class="art-word">ATLAS</span><span class="art-caption mono">MAPPING THE<br />UNKNOWN</span></div>
+            <div class="project-info"><div><p class="project-type mono">WEB DESIGN / 2025</p><h3>Atlas Obscura</h3></div><span class="project-arrow">↗</span></div>
+            <p class="project-description">Une exploration éditoriale des lieux qui échappent aux cartes.</p>
+          </article>
+          <article class="project-card project-tall" data-category="brand" data-project="morrow">
+            <div class="project-art art-morrow"><span class="art-label mono">B / 02</span><span class="morrow-sun"></span><span class="morrow-type">morrow</span><span class="art-caption mono">A BETTER<br />TOMORROW</span></div>
+            <div class="project-info"><div><p class="project-type mono">IDENTITÉ / 2024</p><h3>Morrow Studio</h3></div><span class="project-arrow">↗</span></div>
+            <p class="project-description">Une marque solaire pour les objets qui durent.</p>
+          </article>
+          <article class="project-card project-wide" data-category="lab" data-project="signal">
+            <div class="project-art art-signal"><span class="art-label mono">C / 03</span><span class="signal-wave wave-a"></span><span class="signal-wave wave-b"></span><span class="signal-wave wave-c"></span><span class="signal-copy">SIGNAL<br /><em>FOUND</em></span><span class="art-caption mono">AUDIO / VISUAL<br />EXPERIMENT</span></div>
+            <div class="project-info"><div><p class="project-type mono">CREATIVE CODE / 2024</p><h3>Signal / Noise</h3></div><span class="project-arrow">↗</span></div>
+            <p class="project-description">Un instrument visuel qui donne une forme aux fréquences.</p>
+          </article>
+          <article class="project-card" data-category="web" data-project="arc">
+            <div class="project-art art-arc"><span class="art-label mono">D / 04</span><div class="arc-shape"></div><span class="arc-copy">ARC<br /><em>STUDIO</em></span><span class="art-caption mono">FORM FOLLOWS<br />FEELING</span></div>
+            <div class="project-info"><div><p class="project-type mono">DIRECTION ARTISTIQUE / 2023</p><h3>Arc / Studio</h3></div><span class="project-arrow">↗</span></div>
+            <p class="project-description">Le site d'un collectif qui pense avec les mains.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="about" class="about section-shell">
+        <div class="about-statement"><p class="eyebrow"><span class="eyebrow-line"></span> À propos</p><h2>Entre la logique<br />et <span>l'intuition.</span></h2></div>
+        <div class="about-copy"><p class="large-copy">Je crois aux idées qui prennent de la place. Aux interfaces qui ont une voix. Au code comme un matériau créatif.</p><p>Designer numérique et développeur front-end, je travaille à la croisée des systèmes, des images et des mots. Mon terrain préféré : les projets avec quelque chose à défendre.</p><a class="text-link" href="#contact">En savoir plus <span>↗</span></a></div>
+        <div class="skill-rack"><div class="skill mono"><span>01</span><strong>Direction artistique</strong><span>↗</span></div><div class="skill mono"><span>02</span><strong>UI / UX design</strong><span>↗</span></div><div class="skill mono"><span>03</span><strong>Creative development</strong><span>↗</span></div><div class="skill mono"><span>04</span><strong>Motion &amp; 3D</strong><span>↗</span></div></div>
+      </section>
+
+      <section id="contact" class="contact section-shell"><div class="contact-top mono"><span>DERNIÈRE TRANSMISSION</span><span>ML—2025</span></div><div class="contact-main"><p class="eyebrow"><span class="eyebrow-line"></span> Une idée en tête ?</p><h2>Faisons-lui<br /><span>une place.</span></h2><a class="contact-email" href="mailto:hello@mateoleuillier.fr">hello@mateoleuillier.fr <span>↗</span></a></div><div class="contact-footer mono"><span>© MATEO LEUILLIER</span><span>DESIGN / CODE / CURIOSITY</span><div class="socials"><a href="#contact">IN</a><a href="#contact">IG</a><a href="#contact">BE</a></div></div></section>
+    </main>
+
+    <div class="project-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden><div class="modal-backdrop"></div><div class="modal-window"><button class="modal-close" aria-label="Fermer">×</button><p class="project-type mono" id="modal-type"></p><h2 id="modal-title"></h2><p id="modal-copy"></p><div class="modal-meta mono"><span id="modal-year"></span><span id="modal-role"></span></div></div></div>
+    <script src="script.js"></script>
+  </body>
+</html>
